@@ -35,7 +35,7 @@ DELTA_T_ONB: float = 8.0  # ONB superheat midpoint, K
 T_ONB = T_SAT + DELTA_T_ONB  # ONB temperature, K
 DELTA_T_CRIT: float = Ra_c * mu_l * alpha / (g * beta * H**3)
 HEATING_POWER: float = 2000  # heater power, W
-STEEPNESS: float = 1.0  # Controls the steepness of the sigmoid transition
+STEEPNESS: float = 1.5  # Controls the steepness of the sigmoid transition
 
 
 # Heat loss parameters
