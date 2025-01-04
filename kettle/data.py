@@ -35,8 +35,11 @@ DELTA_T_ONB: float = 8.0  # ONB superheat midpoint, K
 T_ONB = T_SAT + DELTA_T_ONB  # ONB temperature, K
 DELTA_T_CRIT: float = Ra_c * mu_l * alpha / (g * beta * H**3)
 HEATING_POWER: float = 2000  # heater power, W
-STEEPNESS: float = 1.5  # Controls the steepness of the sigmoid transition
+HEATING_CYCLE_LENGTH: float = 3  # heater cycle length, s
+HEATING_CYCLE_HALF_LENGTH: float = HEATING_CYCLE_LENGTH / 2
 
+# Numerical parameters
+STEEPNESS: float = 1.5  # Controls the steepness of the sigmoid transition
 
 # Heat loss parameters
 H_ENV: float = 10.0  # Heat transfer coefficient to environment, W/m^2·K
@@ -60,9 +63,10 @@ def sigmoid(T: float) -> float:
     return 1 / (1 + np.exp(-STEEPNESS * (T - T_ONB)))
 
 
-def heating_function(tt: float) -> float:
+def heating_function_constant(tt: float) -> float:
     """
-    User-defined heater input as a function of time.
+    Heater input as a function of time.
+    Here constant until turn-off.
 
     Parameters:
         tt (float): Time in seconds.
@@ -75,7 +79,24 @@ def heating_function(tt: float) -> float:
     return 0  # Turned off afterward
 
 
-heating_function_vect = np.vectorize(heating_function)
+def heating_function_cycle(tt: float) -> float:
+    """
+    Heater input as a function of time.
+    Here an alternative on/off.
+
+    Parameters:
+        tt (float): Time in seconds.
+
+    Returns:
+        float: Heat input in Watts.
+    """
+    if tt < TURNED_OFF_TIME:
+        return (
+            HEATING_POWER
+            if (tt % HEATING_CYCLE_LENGTH) < HEATING_CYCLE_HALF_LENGTH
+            else 0
+        )
+    return 0  # Turned off afterward
 
 
 def rayleigh_number(Tsurface: float, Twater: float) -> float:
@@ -203,7 +224,9 @@ def heat_loss_to_environment(Twater: float) -> float:
     return H_ENV * A_ENV * (Twater - T_AMBIENT)
 
 
-def temperature_ode(tt: float, y: list[float]) -> list[float]:
+def temperature_ode(
+    tt: float, y: list[float], heating_function: callable
+) -> list[float]:
     """
     ODE system for water and metal temperatures.
 
